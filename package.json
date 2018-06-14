@@ -1,0 +1,31 @@
+{
+  "name": "homebridge-daikin-modbus",
+  "version": "0.1.0",
+  "description": "DAIKIN Modbus plugin for HomeBridge(https://github.com/nfarina/homebridge).",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KaijayLu/homebridge-daikin-modbus.git"
+  },
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "author": "kaijaylu@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KaijayLu/homebridge-daikin-modbus/issues"
+  },
+  "homepage": "https://github.com/KaijayLu/homebridge-daikin-modbus#readme",
+  "dependencies": {
+    "bitwise": "^1.4.0",
+    "crc": "^3.5.0",
+    "serialport": "^6.1.1"
+  },
+  "engines": {
+    "node": ">=6.4.0",
+    "homebridge": ">=0.4.1"
+  }
+}
