@@ -30,10 +30,9 @@ function DaikinModbusPlatform (log, config, api) {
   this.commandPromises = []
   this.units = new Array(16)
 
-  this.initSerialPort()
-
   this.api.on('didFinishLaunching', () => {
     this.log('didFinishLaunching')
+    this.initSerialPort()
     this.initSystem()
   })
 }
