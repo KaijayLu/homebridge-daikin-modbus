@@ -30,11 +30,13 @@ function DaikinModbusPlatform (log, config, api) {
   this.commandPromises = []
   this.units = new Array(16)
 
-  this.api.on('didFinishLaunching', () => {
-    this.log('didFinishLaunching')
-    this.initSerialPort()
-    this.initSystem()
-  })
+  if (config) {
+    this.api.on('didFinishLaunching', () => {
+      this.log('didFinishLaunching')
+      this.initSerialPort()
+      this.initSystem()
+    })
+  }
 }
 
 DaikinModbusPlatform.prototype.configureAccessory = function(accessory) {
