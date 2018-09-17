@@ -29,12 +29,18 @@ function DaikinModbusPlatform (log, config, api) {
   this.accessories = {}
   this.commandPromises = []
   this.units = new Array(16)
+  this.initialized = false
 
   if (config) {
     this.api.on('didFinishLaunching', () => {
       this.log('didFinishLaunching')
       this.initSerialPort()
       this.initSystem()
+      setInterval(() => {
+        if (this.initialized === false) {
+          this.initSystem()
+        }
+      }, 1 * 60 * 60 * 1000)
     })
   }
 }
@@ -114,6 +120,8 @@ DaikinModbusPlatform.prototype.initSystem = function () {
           }
           unit.setAccessory(accessory)
           this.units[i] = unit
+        } else {
+          this.units[i] = undefined
         }
       }
     })
@@ -122,6 +130,7 @@ DaikinModbusPlatform.prototype.initSystem = function () {
   }).catch(err => {
     this.log.warn(err)
   }).then(() => {
+    this.initialized = true
     this.log.info('System initialization finished.')
   })
 }
