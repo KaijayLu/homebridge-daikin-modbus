@@ -37,47 +37,46 @@ class IndoorUnit {
       return 'Heat_Reclaim_Ventilation'
   }
 
+  changeInputRegisters(data) {
+    if (this.accessory.category === Accessory.Categories.THERMOSTAT) {
+
+      const service = this.accessory.getService(Service.Thermostat)
+
+      const register1 = data.readUInt16BE(0)
+      const register2 = data.readUInt16BE(2)
+      const onOff = bitwise.integer.getBit(register1, 0)
+      const operationMode = register2 & 0x000f
+      let state = Characteristic.CurrentHeatingCoolingState.OFF
+      if (onOff) {
+        if (operationMode === 1) {
+          state = Characteristic.CurrentHeatingCoolingState.HEAT
+        } else {
+          state = Characteristic.CurrentHeatingCoolingState.COOL
+        }
+      }
+      service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).updateValue(state)
+      service.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateValue(state)
+
+      const currentValue = data.readInt16BE(8) / 10
+      service.getCharacteristic(Characteristic.CurrentTemperature).updateValue(currentValue)
+
+      const targetValue = data.readInt16BE(4) / 10
+      service.getCharacteristic(Characteristic.TargetTemperature).updateValue(targetValue)
+
+      const displayUnits = Characteristic.TemperatureDisplayUnits.CELSIUS
+      service.getCharacteristic(Characteristic.TemperatureDisplayUnits).updateValue(displayUnits)
+    } else if (accessory.category === Accessory.Categories.FAN) {
+      const service = this.accessory.getService(Service.Fan)
+    }
+    this.inputRegisters = data
+  }
+
   setAccessory(accessory) {
     this.accessory = accessory
 
     if (accessory.category === Accessory.Categories.THERMOSTAT) {
       const service = accessory.getService(Service.Thermostat) || accessory.addService(Service.Thermostat, accessory.displayName)
-      service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
-        .on('get', callback => {
-          this.platform.sync().then(() => {
-            const register1 = this.inputRegisters.readUInt16BE(0)
-            const register2 = this.inputRegisters.readUInt16BE(2)
-            const onOff = bitwise.integer.getBit(register1, 0)
-            const operationMode = register2 & 0x000f
-            if (onOff) {
-              if (operationMode === 1) {
-                callback(null, Characteristic.CurrentHeatingCoolingState.HEAT)
-              } else {
-                callback(null, Characteristic.CurrentHeatingCoolingState.COOL)
-              }
-            } else {
-              callback(null, Characteristic.CurrentHeatingCoolingState.OFF)
-            }
-          })
-        })
       service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
-        .on('get', callback => {
-          this.platform.sync().then(() => {
-            const register1 = this.inputRegisters.readUInt16BE(0)
-            const register2 = this.inputRegisters.readUInt16BE(2)
-            const onOff = bitwise.integer.getBit(register1, 0)
-            const operationMode = register2 & 0x000f
-            if (onOff) {
-              if (operationMode === 1) {
-                callback(null, Characteristic.TargetHeatingCoolingState.HEAT)
-              } else {
-                callback(null, Characteristic.TargetHeatingCoolingState.COOL)
-              }
-            } else {
-              callback(null, Characteristic.TargetHeatingCoolingState.OFF)
-            }
-          })
-        })
         .on('set', (value, callback) => {
           this.platform.sync().then(() => {
             if (value === Characteristic.TargetHeatingCoolingState.OFF)
@@ -89,23 +88,10 @@ class IndoorUnit {
             })
           })
         })
-      service.getCharacteristic(Characteristic.CurrentTemperature)
-        .on('get', callback => {
-          this.platform.sync().then(() => {
-            const value = this.inputRegisters.readInt16BE(8) / 10
-            callback(null, value)
-          })
-        })
       const targetTemperature = service.getCharacteristic(Characteristic.TargetTemperature)
       targetTemperature.props.minValue = this.coolinglowerLimit
       targetTemperature.props.maxValue = this.coolingUpperLimit
       targetTemperature
-        .on('get', callback => {
-          this.platform.sync().then(() => {
-            const value = this.inputRegisters.readInt16BE(4) / 10
-            callback(null, value)
-          })
-        })
         .on('set', (value, callback) => {
           this.platform.sync().then(() => {
             this.inputRegisters.writeInt16BE(value * 10, 4)
@@ -114,13 +100,21 @@ class IndoorUnit {
             })
           })
         })
-      service.getCharacteristic(Characteristic.TemperatureDisplayUnits)
-        .on('get', callback => {
-          callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS)
-        })
     } else if (accessory.category === Accessory.Categories.FAN) {
       const service = accessory.getService(Service.Fan) || accessory.addService(Service.Fan, accessory.displayName)
-      service.getCharacteristic(Characteristic.RotationSpeed)
+      service.getCharacteristic(Characteristic.On)
+        .on('set', (value, callback) => {
+          this.platform.sync().then(() => {
+            if (value) {
+              this.inputRegisters.writeUInt8(0, 1)
+            } else {
+              this.inputRegisters.writeUInt8(1, 1)
+            }
+            this.platform.sendPresetSingleRegisterCommand(1, 42001 + this.serial * 3, this.inputRegisters.slice(0, 2)).then(() => {
+              callback()
+            })
+          })
+        })
     }
   }
 }

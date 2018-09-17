@@ -36,11 +36,18 @@ function DaikinModbusPlatform (log, config, api) {
       this.log('didFinishLaunching')
       this.initSerialPort()
       this.initSystem()
+
       setInterval(() => {
         if (this.initialized === false) {
           this.initSystem()
         }
       }, 1 * 60 * 60 * 1000)
+
+      setInterval(() => {
+        if (this.initialized === true) {
+          this.sync()
+        }
+      }, 10 * 1000)
     })
   }
 }
@@ -187,7 +194,6 @@ DaikinModbusPlatform.prototype.sendPresetSingleRegisterCommand = function (slave
     buf.writeUInt16BE(registerNumber - 40001, 2)
     valueBuffer.copy(buf, 4)
     buf.writeUInt16LE(crc.crc16modbus(buf.slice(0, 6)), 6)
-    console.log(buf)
     this.sendCommand(buf).then(res => {
       resolve(res)
     }).catch((err) => {
@@ -262,7 +268,7 @@ DaikinModbusPlatform.prototype.refreshAllRegisters = function () {
     p.then(() => {
       this.units.forEach((unit, index) => {
         const start = index * 6 * 2
-        unit.inputRegisters = data.slice(start, start + 6 * 2)
+        unit.changeInputRegisters(data.slice(start, start + 6 * 2))
       })
     }).then(() => {
       // it can write 30 registers at a time
