@@ -38,13 +38,10 @@ class IndoorUnit {
   }
 
   changeInputRegisters(data) {
+    const register1 = data.readUInt16BE(0)
+    const onOff = bitwise.integer.getBit(register1, 0)
     if (this.accessory.category === Accessory.Categories.THERMOSTAT) {
-
-      const service = this.accessory.getService(Service.Thermostat)
-
-      const register1 = data.readUInt16BE(0)
       const register2 = data.readUInt16BE(2)
-      const onOff = bitwise.integer.getBit(register1, 0)
       const operationMode = register2 & 0x000f
       let state = Characteristic.CurrentHeatingCoolingState.OFF
       if (onOff) {
@@ -54,23 +51,16 @@ class IndoorUnit {
           state = Characteristic.CurrentHeatingCoolingState.COOL
         }
       }
-      service.getCharacteristic(Characteristic.CurrentHeatingCoolingState).updateValue(state)
-      service.getCharacteristic(Characteristic.TargetHeatingCoolingState).updateValue(state)
+      this.currentState.updateValue(state)
+      this.targetState.updateValue(state)
 
       const currentValue = data.readInt16BE(8) / 10
-      service.getCharacteristic(Characteristic.CurrentTemperature).updateValue(currentValue)
+      this.currentTemp.updateValue(currentValue)
 
       const targetValue = data.readInt16BE(4) / 10
-      service.getCharacteristic(Characteristic.TargetTemperature).updateValue(targetValue)
-
-      const displayUnits = Characteristic.TemperatureDisplayUnits.CELSIUS
-      service.getCharacteristic(Characteristic.TemperatureDisplayUnits).updateValue(displayUnits)
+      this.targetTemp.updateValue(targetValue)
     } else if (this.accessory.category === Accessory.Categories.FAN) {
-      const service = this.accessory.getService(Service.Fan)
-
-      const register1 = data.readUInt16BE(0)
-      const onOff = bitwise.integer.getBit(register1, 0)
-      service.getCharacteristic(Characteristic.On).updateValue(onOff)
+      this.onState.updateValue(onOff)
     }
     this.inputRegisters = data
   }
@@ -80,45 +70,71 @@ class IndoorUnit {
 
     if (accessory.category === Accessory.Categories.THERMOSTAT) {
       const service = accessory.getService(Service.Thermostat) || accessory.addService(Service.Thermostat, accessory.displayName)
-      service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
-        .on('set', (value, callback) => {
-          this.platform.sync().then(() => {
-            if (value === Characteristic.TargetHeatingCoolingState.OFF)
-              this.inputRegisters.writeUInt8(0, 1)
-            else
-              this.inputRegisters.writeUInt8(1, 1)
-            this.platform.sendPresetSingleRegisterCommand(1, 42001 + this.serial * 3, this.inputRegisters.slice(0, 2)).then(() => {
-              callback()
-            })
+      service.getCharacteristic(Characteristic.TemperatureDisplayUnits).on('get', callback => {
+        callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS)
+      })
+
+      this.currentState = service.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
+      this.targetState = service.getCharacteristic(Characteristic.TargetHeatingCoolingState)
+      this.currentTemp = service.getCharacteristic(Characteristic.CurrentTemperature)
+      this.targetTemp = service.getCharacteristic(Characteristic.TargetTemperature)
+
+      this.currentState.on('get', callback => {
+        this.platform.sync()
+        callback(null, this.currentState.value)
+      })
+      this.targetState.on('get', callback => {
+        this.platform.sync()
+        callback(null, this.targetState.value)
+      })
+      this.currentTemp.on('get', callback => {
+        this.platform.sync()
+        callback(null, this.currentTemp.value)
+      })
+      this.targetTemp.on('get', callback => {
+        this.platform.sync()
+        callback(null, this.targetTemp.value)
+      })
+      this.targetState.on('set', (value, callback) => {
+        this.platform.sync().then(() => {
+          if (value === Characteristic.TargetHeatingCoolingState.OFF)
+            this.inputRegisters.writeUInt8(0, 1)
+          else
+            this.inputRegisters.writeUInt8(1, 1)
+          this.platform.sendPresetSingleRegisterCommand(1, 42001 + this.serial * 3, this.inputRegisters.slice(0, 2)).then(() => {
+            callback()
           })
         })
-      const targetTemperature = service.getCharacteristic(Characteristic.TargetTemperature)
-      targetTemperature.props.minValue = this.coolinglowerLimit
-      targetTemperature.props.maxValue = this.coolingUpperLimit
-      targetTemperature
-        .on('set', (value, callback) => {
-          this.platform.sync().then(() => {
-            this.inputRegisters.writeInt16BE(value * 10, 4)
-            this.platform.sendPresetSingleRegisterCommand(1, 42003 + this.serial * 3, this.inputRegisters.slice(4, 6)).then(() => {
-              callback()
-            })
+      })
+      this.targetTemp.props.minValue = this.coolinglowerLimit
+      this.targetTemp.props.maxValue = this.coolingUpperLimit
+      this.targetTemp.on('set', (value, callback) => {
+        this.platform.sync().then(() => {
+          this.inputRegisters.writeInt16BE(value * 10, 4)
+          this.platform.sendPresetSingleRegisterCommand(1, 42003 + this.serial * 3, this.inputRegisters.slice(4, 6)).then(() => {
+            callback()
           })
         })
+      })
     } else if (accessory.category === Accessory.Categories.FAN) {
       const service = accessory.getService(Service.Fan) || accessory.addService(Service.Fan, accessory.displayName)
-      service.getCharacteristic(Characteristic.On)
-        .on('set', (value, callback) => {
-          this.platform.sync().then(() => {
-            if (value) {
-              this.inputRegisters.writeUInt8(0, 1)
-            } else {
-              this.inputRegisters.writeUInt8(1, 1)
-            }
-            this.platform.sendPresetSingleRegisterCommand(1, 42001 + this.serial * 3, this.inputRegisters.slice(0, 2)).then(() => {
-              callback()
-            })
+      this.onState = service.getCharacteristic(Characteristic.On)
+      this.onState.on('get', callback => {
+        this.platform.sync()
+        callback(null, this.onState.value)
+      })
+      this.onState.on('set', (value, callback) => {
+        this.platform.sync().then(() => {
+          if (value) {
+            this.inputRegisters.writeUInt8(1, 1)
+          } else {
+            this.inputRegisters.writeUInt8(0, 1)
+          }
+          this.platform.sendPresetSingleRegisterCommand(1, 42001 + this.serial * 3, this.inputRegisters.slice(0, 2)).then(() => {
+            callback()
           })
         })
+      })
     }
   }
 }
