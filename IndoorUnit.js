@@ -65,8 +65,12 @@ class IndoorUnit {
 
       const displayUnits = Characteristic.TemperatureDisplayUnits.CELSIUS
       service.getCharacteristic(Characteristic.TemperatureDisplayUnits).updateValue(displayUnits)
-    } else if (accessory.category === Accessory.Categories.FAN) {
+    } else if (this.accessory.category === Accessory.Categories.FAN) {
       const service = this.accessory.getService(Service.Fan)
+
+      const register1 = data.readUInt16BE(0)
+      const onOff = bitwise.integer.getBit(register1, 0)
+      service.getCharacteristic(Characteristic.On).updateValue(onOff)
     }
     this.inputRegisters = data
   }

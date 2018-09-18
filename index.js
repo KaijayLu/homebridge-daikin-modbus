@@ -41,7 +41,7 @@ function DaikinModbusPlatform (log, config, api) {
         if (this.initialized === false) {
           this.initSystem()
         }
-      }, 1 * 60 * 60 * 1000)
+      }, 5000)
 
       setInterval(() => {
         if (this.initialized === true) {
@@ -267,8 +267,10 @@ DaikinModbusPlatform.prototype.refreshAllRegisters = function () {
     }
     p.then(() => {
       this.units.forEach((unit, index) => {
-        const start = index * 6 * 2
-        unit.changeInputRegisters(data.slice(start, start + 6 * 2))
+        if (unit) {
+          const start = index * 6 * 2
+          unit.changeInputRegisters(data.slice(start, start + 6 * 2))
+        }
       })
     }).then(() => {
       // it can write 30 registers at a time
