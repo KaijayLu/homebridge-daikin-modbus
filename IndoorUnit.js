@@ -80,20 +80,25 @@ class IndoorUnit {
       this.targetTemp = service.getCharacteristic(Characteristic.TargetTemperature)
 
       this.currentState.on('get', callback => {
-        this.platform.sync()
-        callback(null, this.currentState.value)
+        console.log('get currentState')
+        this.platform.sync().then(() => {
+          callback(null, this.currentState.value)
+        })
       })
       this.targetState.on('get', callback => {
-        this.platform.sync()
-        callback(null, this.targetState.value)
+        this.platform.sync().then(() => {
+          callback(null, this.targetState.value)
+        })
       })
       this.currentTemp.on('get', callback => {
-        this.platform.sync()
-        callback(null, this.currentTemp.value)
+        this.platform.sync().then(() => {
+          callback(null, this.currentTemp.value)
+        })
       })
       this.targetTemp.on('get', callback => {
-        this.platform.sync()
-        callback(null, this.targetTemp.value)
+        this.platform.sync().then(() => {
+          callback(null, this.targetTemp.value)
+        })
       })
       this.targetState.on('set', (value, callback) => {
         this.platform.sync().then(() => {
@@ -120,8 +125,9 @@ class IndoorUnit {
       const service = accessory.getService(Service.Fan) || accessory.addService(Service.Fan, accessory.displayName)
       this.onState = service.getCharacteristic(Characteristic.On)
       this.onState.on('get', callback => {
-        this.platform.sync()
-        callback(null, this.onState.value)
+        this.platform.sync().then(() => {
+          callback(null, this.onState.value)
+        })
       })
       this.onState.on('set', (value, callback) => {
         this.platform.sync().then(() => {

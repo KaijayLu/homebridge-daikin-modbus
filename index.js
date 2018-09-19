@@ -47,7 +47,7 @@ function DaikinModbusPlatform (log, config, api) {
         if (this.initialized === true) {
           this.sync()
         }
-      }, 10 * 1000)
+      }, 60 * 1000)
     })
   }
 }
