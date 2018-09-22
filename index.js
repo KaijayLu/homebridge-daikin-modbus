@@ -237,9 +237,11 @@ DaikinModbusPlatform.prototype.sync = function () {
         resolve()
       } else {
         this.refreshAllRegisters().then(() => {
+          this.log.warn('refreshAllRegisters() finished')
           this._lastTime = Date.now()
           resolve()
         }).catch(err => {
+          this.log.warn(err)
           this._lastTime = Date.now()
           reject(err)
         })
