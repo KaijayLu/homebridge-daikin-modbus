@@ -237,11 +237,11 @@ DaikinModbusPlatform.prototype.sync = function () {
         resolve()
       } else {
         this.refreshAllRegisters().then(() => {
-          this.log.warn('refreshAllRegisters() finished')
+          this.log.warn('----------------------------- refreshAllRegisters() finished')
           this._lastTime = Date.now()
           resolve()
         }).catch(err => {
-          this.log.warn(err)
+          this.log.warn('sync error: ' + err)
           this._lastTime = Date.now()
           reject(err)
         })
@@ -255,6 +255,7 @@ DaikinModbusPlatform.prototype.sync = function () {
 
 DaikinModbusPlatform.prototype.refreshAllRegisters = function () {
   return new Promise((resolve, reject) => {
+    this.log.warn('refreshAllRegisters() started')
     let p = Promise.resolve()
     // it can read 32 registers at a time
     const numberOfInputRegister = 32
