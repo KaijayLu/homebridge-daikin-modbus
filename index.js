@@ -72,6 +72,9 @@ DaikinModbusPlatform.prototype.initSerialPort = function () {
     if (data.length < 32) {
       this.checkMessage(Buffer.concat(dataArray))
       dataArray.length = 0
+    } else {
+      this.log.warn('serial data length ' + data.length)
+      dataArray.length = 0
     }
   })
 
