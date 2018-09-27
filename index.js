@@ -65,15 +65,21 @@ DaikinModbusPlatform.prototype.initSerialPort = function () {
     this.log(err.message)
   })
 
-  // max length of data is 32 bytes
+  // long return data is separate into several pieces
   const dataArray = []
+  let responseLength = 0
   port.on('data', (data) => {
+    if (dataArray.length === 0) {
+      const funCode = data.readUInt8(1)
+      if (funCode === 4) {
+        responseLength =  3 + data.readUInt8(2) + 2
+      } else {
+        responseLength = 0
+      }
+    }
     dataArray.push(data)
-    if (data.length < 32) {
+    if (Buffer.concat(dataArray).length >= responseLength) {
       this.checkMessage(Buffer.concat(dataArray))
-      dataArray.length = 0
-    } else {
-      this.log.warn('serial data length ' + data.length)
       dataArray.length = 0
     }
   })
@@ -240,11 +246,9 @@ DaikinModbusPlatform.prototype.sync = function () {
         resolve()
       } else {
         this.refreshAllRegisters().then(() => {
-          this.log.warn('----------------------------- refreshAllRegisters() finished')
           this._lastTime = Date.now()
           resolve()
         }).catch(err => {
-          this.log.warn('sync error: ' + err)
           this._lastTime = Date.now()
           reject(err)
         })
@@ -258,7 +262,6 @@ DaikinModbusPlatform.prototype.sync = function () {
 
 DaikinModbusPlatform.prototype.refreshAllRegisters = function () {
   return new Promise((resolve, reject) => {
-    this.log.warn('refreshAllRegisters() started')
     let p = Promise.resolve()
     // it can read 32 registers at a time
     const numberOfInputRegister = 32

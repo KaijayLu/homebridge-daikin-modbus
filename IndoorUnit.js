@@ -80,7 +80,6 @@ class IndoorUnit {
       this.targetTemp = service.getCharacteristic(Characteristic.TargetTemperature)
 
       this.currentState.on('get', callback => {
-        console.log('get currentState')
         this.platform.sync().then(() => {
           callback(null, this.currentState.value)
         })
