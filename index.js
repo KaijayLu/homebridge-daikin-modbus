@@ -41,7 +41,7 @@ function DaikinModbusPlatform (log, config, api) {
         if (this.initialized === false) {
           this.initSystem()
         }
-      }, 5000)
+      }, 10 * 1000)
 
       setInterval(() => {
         if (this.initialized === true) {
@@ -143,11 +143,11 @@ DaikinModbusPlatform.prototype.initSystem = function () {
     })
   }).then(() => {
     return this.refreshAllRegisters()
-  }).catch(err => {
-    this.log.warn(err)
   }).then(() => {
     this.initialized = true
     this.log.info('System initialization finished.')
+  }).catch(err => {
+    this.log.warn(err)
   })
 }
 
@@ -188,9 +188,12 @@ DaikinModbusPlatform.prototype.sendReadInputRegisterCommand = function (slaveAdd
     buf.writeUInt16BE(count, 4)
     buf.writeUInt16LE(crc.crc16modbus(buf.slice(0, 6)), 6)
     this.sendCommand(buf).then(res => {
-      resolve(res)
-    }).catch((err) => {
-      reject(err)
+      if (res) {
+        resolve(res)
+      } else {
+        const err = new Error('SendCommand Error')
+        reject(err)
+      }
     })
   })
 }
@@ -204,9 +207,12 @@ DaikinModbusPlatform.prototype.sendPresetSingleRegisterCommand = function (slave
     valueBuffer.copy(buf, 4)
     buf.writeUInt16LE(crc.crc16modbus(buf.slice(0, 6)), 6)
     this.sendCommand(buf).then(res => {
-      resolve(res)
-    }).catch((err) => {
-      reject(err)
+      if (res) {
+        resolve(res)
+      } else {
+        const err = new Error('SendCommand Error')
+        reject(err)
+      }
     })
   })
 }
@@ -229,9 +235,12 @@ DaikinModbusPlatform.prototype.sendPresetMultipleRegisterCommand = function (sla
     valueBuffer.copy(buf, 7)
     buf.writeUInt16LE(crc.crc16modbus(buf.slice(0, 7 + count * 2)), 7 + count * 2)
     this.sendCommand(buf).then(res => {
-      resolve(res)
-    }).catch((err) => {
-      reject(err)
+      if (res) {
+        resolve(res)
+      } else {
+        const err = new Error('SendCommand Error')
+        reject(err)
+      }
     })
   })
 }
@@ -346,7 +355,7 @@ DaikinModbusPlatform.prototype.checkMessage = function (data) {
   const errCheck = data.readUInt16LE(errCheckAt)
 
   if (errCheck === crc.crc16modbus(data.slice(0, errCheckAt))) {
-    p.resolve(data)
+      p.resolve(data)
   } else {
     const err = new Error('CRC16 check error')
     p.reject(err)

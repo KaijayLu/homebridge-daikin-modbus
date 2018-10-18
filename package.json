@@ -1,6 +1,6 @@
 {
   "name": "homebridge-daikin-modbus",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "DAIKIN Modbus plugin for HomeBridge(https://github.com/nfarina/homebridge).",
   "main": "index.js",
   "scripts": {
